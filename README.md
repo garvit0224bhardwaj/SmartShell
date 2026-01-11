@@ -32,16 +32,3 @@ SmartShell is a custom shell implementation written in C, featuring basic shell 
     python app.py
     ```
 3. Open the provided link in your browser (usually `http://127.0.0.1:5000/`).
-
-## Suggested Project Names
-
-- SmartShell
-- LunaShell
-- OrbitShell
-- LlamaShell
-- NeonTerminal
-- AI-Shell
-- VT-Shell
-- FunShell
-
-Feel free to choose any name that fits your style!
