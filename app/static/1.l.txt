@@ -1,0 +1,15 @@
+%{ 
+    #include<stdio.h> 
+%} 
+ 
+%% 
+[01]*010[01]*            {printf("Valid");} 
+.*                      {printf("Invalid");} 
+%% 
+ 
+int yywrap(){ 
+    return 1; 
+} 
+ 
+int main(){     yylex();     return 0; 
+} 

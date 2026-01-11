@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome to LUNA</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'VT323', monospace;
+      background-color: #1c1c1c;
+      color: #e6e6e6;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #video-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      z-index: -1;
+      overflow: hidden;
+    }
+
+    #video-container video {
+      min-width: 100%;
+      min-height: 100%;
+      object-fit: cover;
+      filter: brightness(0.3); /* Optional dim effect for readability */
+    }
+
+    #main-content {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.8em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100px;
+      margin: 0;
+      background: linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;
+      animation: gradientShift 5s ease infinite;
+      background-size: 300% 300%;
+    }
+
+    @keyframes gradientShift {
+      0% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+      100% {
+        background-position: 0% 50%;
+      }
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .terminal-container {
+      background-color: rgba(0, 0, 0, 0.75);
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      overflow: hidden;
+      width: 80%;
+      max-width: 800px;
+      margin-top: 30px;
+    }
+
+    .terminal {
+      padding: 15px;
+      overflow-y: auto;
+      max-height: 400px;
+    }
+
+    .prompt {
+      color: #ff47ac;
+      margin-right: 5px;
+    }
+
+    .input-area {
+      display: flex;
+      align-items: center;
+      padding: 5px 15px;
+      background-color: #21252b;
+      border-top: 1px solid #3e4451;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      background-color: transparent;
+      color: #abb2bf;
+      border: none;
+      outline: none;
+      font-family: 'VT323', monospace;
+      font-size: 1.1em;
+      padding: 8px 0;
+    }
+
+    .output {
+      margin-top: 8px;
+      white-space: pre-wrap;
+      font-size: 1.1em;
+      line-height: 1.4;
+    }
+
+    .error {
+      color: #ff4787;
+    }
+  </style>
+</head>
+<body>
+  <!-- Video Background Container -->
+  <div id="video-container"></div>
+
+  <!-- Main Content Container -->
+  <div id="main-content">
+    <h1>
+      Welcome To SmartShell&nbsp;
+      <div class="title" id="title">
+        <span id="title-rest">LUNA</span>
+      </div>
+    </h1>
+
+    <div class="terminal-container">
+      <div class="terminal" id="terminal">
+        <div id="output-area"></div>
+      </div>
+      <div class="input-area">
+        <span class="prompt">mysh></span>
+        <input type="text" id="command-input" autofocus>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Function to add background video
+    function addBackgroundVideo() {
+      const videoContainer = document.getElementById('video-container');
+
+      const video = document.createElement('video');
+      video.src = '/static/video.mkv'; // Update path if your Flask static directory differs
+      video.autoplay = true;
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+
+      videoContainer.appendChild(video);
+    }
+
+    addBackgroundVideo(); // Call on load
+
+    const terminal = document.getElementById('terminal');
+    const outputArea = document.getElementById('output-area');
+    const commandInput = document.getElementById('command-input');
+
+    let currentDir = '';
+
+    async function runCommand(command) {
+      if (!command.trim()) return;
+
+      const promptText = currentDir ? `${currentDir}> ${command}` : `mysh> ${command}`;
+      const commandDiv = document.createElement('div');
+      commandDiv.classList.add('output');
+      commandDiv.textContent = promptText;
+      outputArea.appendChild(commandDiv);
+
+      if (command.trim().toLowerCase() === 'cls') {
+        outputArea.innerHTML = '';
+        return;
+      }
+
+      try {
+        const res = await fetch('/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command })
+        });
+
+        const data = await res.json();
+        const outputDiv = document.createElement('div');
+        outputDiv.classList.add('output');
+        outputDiv.innerHTML = data.output ? data.output : `<span class="error">${data.error}</span>`;
+        outputArea.appendChild(outputDiv);
+
+        if (data.cwd) currentDir = data.cwd;
+      } catch (err) {
+        const errorDiv = document.createElement('div');
+        errorDiv.classList.add('output', 'error');
+        errorDiv.textContent = `Error: ${err.message}`;
+        outputArea.appendChild(errorDiv);
+      }
+
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    commandInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        const command = commandInput.value.trim();
+        commandInput.value = '';
+        runCommand(command);
+      }
+    });
+
+    commandInput.addEventListener('blur', () => {
+      setTimeout(() => commandInput.focus(), 10);
+    });
+  </script>
+</body>
+</html>
